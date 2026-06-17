@@ -332,68 +332,141 @@
 
 <script>
 // ═══════════════════════════════════════════════════════════════════════════
-// AudioManager — synthesises realistic pop sounds via Web Audio API
+// AudioManager
+// Checks public/audio/ for custom files on startup; falls back to synthesis.
+//   public/audio/pop.mp3   → replaces the bubble-pop sound
+//   public/audio/fresh.mp3 → plays when Fresh Sheet is clicked
 // ═══════════════════════════════════════════════════════════════════════════
 class AudioManager {
   constructor() {
-    this._ctx = null;
-    this.enabled = true;
+    this._ctx      = null;
+    this.enabled   = true;
+    this._unlocked = false;
+    this._popBuf   = null; // raw ArrayBuffer for pop sound file
+    this._freshBuf = null; // raw ArrayBuffer for fresh-sheet sound file
+    this._tryLoadAssets();
+
+    // iOS Safari keeps AudioContext suspended until a user gesture fires a
+    // silent buffer. Register on capture phase so it runs before bubbles pop.
+    const unlock = () => { this._unlock(); };
+    document.addEventListener('touchstart', unlock, { once: true, capture: true });
+    document.addEventListener('touchend',   unlock, { once: true, capture: true });
+    document.addEventListener('mousedown',  unlock, { once: true, capture: true });
   }
 
+  // Create (or fetch) the AudioContext
   _getCtx() {
     if (!this._ctx) {
       this._ctx = new (window.AudioContext || window.webkitAudioContext)();
     }
-    if (this._ctx.state === 'suspended') this._ctx.resume();
     return this._ctx;
+  }
+
+  // Resume the context and play a silent 1-sample buffer — required by iOS
+  async _unlock() {
+    if (this._unlocked) return;
+    this._unlocked = true;
+    try {
+      const ctx = this._getCtx();
+      await ctx.resume();
+      const silent = ctx.createBuffer(1, 1, ctx.sampleRate);
+      const src    = ctx.createBufferSource();
+      src.buffer   = silent;
+      src.connect(ctx.destination);
+      src.start(0);
+    } catch (_) {}
+  }
+
+  // Ensure context is running, then run callback
+  _withCtx(fn) {
+    const ctx = this._getCtx();
+    if (ctx.state === 'running') { fn(ctx); return; }
+    ctx.resume().then(() => fn(ctx)).catch(() => {});
+  }
+
+  // Silently try to fetch optional custom sound files from public/audio/
+  async _tryLoadAssets() {
+    const pairs = [
+      ['_popBuf',   ['public/audio/pop.mp3',   'public/audio/pop.wav',   'public/audio/pop.ogg']],
+      ['_freshBuf', ['public/audio/fresh.mp3', 'public/audio/fresh.wav', 'public/audio/fresh.ogg']],
+    ];
+    for (const [prop, paths] of pairs) {
+      for (const path of paths) {
+        try {
+          const res = await fetch(path);
+          if (!res.ok) continue;
+          this[prop] = await res.arrayBuffer();
+          break;
+        } catch (_) {}
+      }
+    }
+  }
+
+  // Decode and play a stored ArrayBuffer (slice so the original stays intact)
+  async _playRaw(arrayBuffer, vol = 0.85) {
+    this._withCtx(async ctx => {
+      try {
+        const decoded = await ctx.decodeAudioData(arrayBuffer.slice(0));
+        const src = ctx.createBufferSource();
+        src.buffer = decoded;
+        const gain = ctx.createGain();
+        gain.gain.value = vol;
+        src.connect(gain);
+        gain.connect(ctx.destination);
+        src.start();
+      } catch (_) {}
+    });
   }
 
   pop() {
     if (!this.enabled) return;
-    try {
-      const ctx = this._getCtx();
-      const t   = ctx.currentTime;
 
-      // Randomise each pop so none sound identical
-      const baseFreq = 190 + Math.random() * 290;   // 190–480 Hz
-      const vol      = 0.17 + Math.random() * 0.24;
-      const dur      = 0.050 + Math.random() * 0.052; // 50–102 ms
+    if (this._popBuf) {
+      this._playRaw(this._popBuf, 0.65 + Math.random() * 0.35);
+      return;
+    }
 
-      // White-noise burst with exponential decay envelope
-      const n   = Math.ceil(ctx.sampleRate * dur);
-      const buf = ctx.createBuffer(1, n, ctx.sampleRate);
-      const d   = buf.getChannelData(0);
-      for (let i = 0; i < n; i++) {
-        d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (n * 0.10));
-      }
+    // Synthesised fallback: bandpass-filtered noise burst
+    this._withCtx(ctx => {
+      try {
+        const t        = ctx.currentTime;
+        const baseFreq = 190 + Math.random() * 290;
+        const vol      = 0.17 + Math.random() * 0.24;
+        const dur      = 0.050 + Math.random() * 0.052;
 
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
+        const n   = Math.ceil(ctx.sampleRate * dur);
+        const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+        const d   = buf.getChannelData(0);
+        for (let i = 0; i < n; i++) {
+          d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (n * 0.10));
+        }
 
-      // Bandpass colours the noise into a "plastic pop" timbre
-      const bp = ctx.createBiquadFilter();
-      bp.type = 'bandpass';
-      bp.frequency.value = baseFreq;
-      bp.Q.value = 0.45 + Math.random() * 0.95;
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
 
-      // Slight high-shelf adds the snappy "crack"
-      const hs = ctx.createBiquadFilter();
-      hs.type = 'highshelf';
-      hs.frequency.value = 2600;
-      hs.gain.value = 4 + Math.random() * 3;
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.value = baseFreq;
+        bp.Q.value = 0.45 + Math.random() * 0.95;
 
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(vol, t);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + dur * 1.6);
+        const hs = ctx.createBiquadFilter();
+        hs.type = 'highshelf';
+        hs.frequency.value = 2600;
+        hs.gain.value = 4 + Math.random() * 3;
 
-      src.connect(bp);
-      bp.connect(hs);
-      hs.connect(gain);
-      gain.connect(ctx.destination);
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(vol, t);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + dur * 1.6);
 
-      src.start(t);
-      src.stop(t + dur * 2);
-    } catch (_) { /* Audio unavailable — silently continue */ }
+        src.connect(bp); bp.connect(hs); hs.connect(gain); gain.connect(ctx.destination);
+        src.start(t); src.stop(t + dur * 2);
+      } catch (_) {}
+    });
+  }
+
+  fresh() {
+    if (!this.enabled || !this._freshBuf) return;
+    this._playRaw(this._freshBuf, 0.9);
   }
 
   setEnabled(v) { this.enabled = v; }
@@ -662,7 +735,7 @@ btnFresh.addEventListener('click', () => {
       : 'Double-click for a bigger sheet!';
     btnFresh.textContent = 'ahhh new';
     setTimeout(() => { btnFresh.textContent = 'Fresh Sheet'; }, 1400);
-
+    audio.fresh();
   }, 320);
 });
 
