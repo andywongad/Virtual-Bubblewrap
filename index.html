@@ -38,7 +38,7 @@
       align-items: center;
       justify-content: center;
       overflow: hidden;
-      cursor: default;
+      cursor: grab;
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
@@ -50,7 +50,7 @@
     .bubble { border-radius: 50%; will-change: transform; }
 
     .bubble-unpopped {
-      cursor: pointer;
+      cursor: inherit;
       background: radial-gradient(
         ellipse at 33% 28%,
         rgba(255,255,255,0.97)   0%,
@@ -120,49 +120,6 @@
         inset 0 4px 9px rgba(255,255,255,0.78);
     }
 
-    /* ─── Classic 2004 mode ─────────────────────────────────────────────── */
-    body.classic { background: #dce8f5; font-family: Arial, Helvetica, sans-serif; }
-
-    body.classic #sheet-container {
-      background: linear-gradient(160deg, #7799bb 0%, #6688aa 100%) !important;
-      border: 3px solid #4466aa; border-radius: 4px;
-    }
-
-    body.classic .bubble-unpopped {
-      background: radial-gradient(circle at 38% 33%,
-        #ffffff 0%, #c0deff 25%, #80aaee 55%, #4477cc 82%, #2255aa 100%);
-      box-shadow: 0 3px 7px rgba(0,0,60,0.38),
-        inset 0 -2px 4px rgba(20,40,100,0.25),
-        inset 0 3px 7px rgba(255,255,255,0.68);
-    }
-
-    body.classic .bubble-unpopped:hover {
-      box-shadow: 0 5px 10px rgba(0,0,60,0.42),
-        inset 0 -2px 4px rgba(20,40,100,0.25),
-        inset 0 3px 7px rgba(255,255,255,0.68);
-    }
-
-    body.classic .bubble-popped {
-      background: radial-gradient(circle at 50% 55%,
-        #384858 0%, #485868 38%, #586878 100%);
-      box-shadow: inset 0 2px 5px rgba(0,0,0,0.45);
-    }
-
-    body.classic #app-title {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(180deg, #7799dd 0%, #3355aa 100%);
-      color: #fff; padding: 3px 16px 4px;
-      border-radius: 3px; border: 1px solid #2244aa;
-      text-shadow: 1px 1px 2px rgba(0,0,60,0.4);
-    }
-
-    body.classic .ctrl-label  { font-family: Arial, sans-serif; color: #112244; }
-    body.classic #btn-fresh   { font-family: Arial, sans-serif; background: #3366cc; border: 2px solid #2244aa; }
-    body.classic #btn-fresh:hover { background: #2255bb; }
-    body.classic .stat-label  { color: #223355; }
-    body.classic .stat-val    { color: #001133; }
-    body.classic .tool-btn.active { background: #3366cc; border-color: #2244aa; }
-    body.classic #kbd-hint    { color: #4477aa; font-family: Arial, sans-serif; }
 
     /* ─── Controls ──────────────────────────────────────────────────────── */
     .ctrl-label {
@@ -223,23 +180,10 @@
     }
     .count-bump { animation: count-bump 0.22s ease-out; display: inline-block; }
 
-    /* ─── Streak overlay (inside sheet) ────────────────────────────────── */
-    #streak-overlay {
-      position: absolute; inset: 0;
-      display: flex; align-items: center; justify-content: center;
-      pointer-events: none; z-index: 10;
-    }
-    #streak-text {
-      font-size: 3rem; font-weight: 900;
-      color: white;
-      text-shadow: 0 2px 12px rgba(0,0,0,0.55), 0 0 24px rgba(59,130,246,0.4);
-      opacity: 0; transform: scale(0.7);
-      transition: opacity 0.15s ease-out, transform 0.15s ease-out;
-    }
-    #streak-text.show { opacity: 1; transform: scale(1); }
 
     /* ─── Manic cursor ──────────────────────────────────────────────────── */
-    #sheet-container.manic-cursor { cursor: crosshair; }
+    #sheet-container.grabbing      { cursor: grabbing; }
+    #sheet-container.manic-cursor  { cursor: crosshair; }
 
     /* ─── Kbd hint ──────────────────────────────────────────────────────── */
     #kbd-hint {
@@ -259,60 +203,54 @@
     </h1>
   </header>
 
-  <!-- Controls row 1: checkboxes ─────────────────────────────────────── -->
-  <div class="flex-shrink-0 flex items-start justify-center gap-0.5 py-0.5 px-3 flex-wrap">
+  <!-- Controls ───────────────────────────────────────────────────────── -->
+  <div class="flex-shrink-0 flex items-start justify-center gap-0.5 py-1 px-3 flex-wrap">
 
-    <div style="display:flex;flex-direction:column;align-items:flex-start;align-self:flex-start;">
+    <div style="display:flex;flex-direction:column;align-items:flex-start;">
       <label class="ctrl-label"><input type="checkbox" id="chk-sound" checked> Sound On</label>
       <span class="sub-hint">on mobile, ringer must be on</span>
     </div>
 
     <span class="stat-sep" style="padding-top:6px;">|</span>
 
-    <div style="display:flex;flex-direction:column;align-items:flex-start;align-self:flex-start;">
-      <label class="ctrl-label"><input type="checkbox" id="chk-manic"> Manic Mode</label>
-      <span class="sub-hint">hold &amp; drag and go wild</span>
+    <div style="display:flex;flex-direction:column;align-items:flex-start;">
+      <label class="ctrl-label"><input type="checkbox" id="chk-manic"> Pop Mania</label>
+      <span class="sub-hint">hold, drag and go wild</span>
     </div>
 
     <span class="stat-sep" style="padding-top:6px;">|</span>
 
-    <label class="ctrl-label" style="align-self:flex-start;">
-      <input type="checkbox" id="chk-classic"> Classic 2004
-    </label>
-
-    <span class="stat-sep" style="padding-top:6px;">|</span>
-
-    <div style="display:flex;flex-direction:column;align-items:flex-start;align-self:flex-start;">
+    <div style="display:flex;flex-direction:column;align-items:flex-start;">
       <label class="ctrl-label"><input type="checkbox" id="chk-ghost"> Ghost Mode</label>
-      <span class="sub-hint">bubbles slowly re-inflate after 100%</span>
+      <span class="sub-hint">re-inflate after 100%</span>
     </div>
 
     <span class="stat-sep" style="padding-top:6px;">|</span>
 
-    <button id="btn-fresh" title="Reset the sheet">Fresh Sheet</button>
-  </div>
+    <div style="display:flex;align-items:center;gap:3px;padding-top:4px;">
+      <button class="tool-btn" data-size="80">S</button>
+      <button class="tool-btn active" data-size="56">M</button>
+      <button class="tool-btn" data-size="36">L</button>
+      <button class="tool-btn" data-size="26">XL</button>
+    </div>
 
-  <!-- Controls row 2: size + color + share ───────────────────────────── -->
-  <div class="flex-shrink-0 flex items-center justify-center gap-1 py-0.5 px-3 flex-wrap">
+    <span class="stat-sep" style="padding-top:6px;">|</span>
 
-    <span style="font-size:12px;color:#6b7280;white-space:nowrap;">Size:</span>
-    <button class="tool-btn" data-size="80">S</button>
-    <button class="tool-btn active" data-size="56">M</button>
-    <button class="tool-btn" data-size="36">L</button>
-    <button class="tool-btn" data-size="26">XL</button>
+    <div style="display:flex;align-items:center;gap:4px;padding-top:6px;">
+      <button class="swatch active" data-theme=""       style="background:#c2d0da;" title="Clear"></button>
+      <button class="swatch"        data-theme="pink"   style="background:#d8a8b8;" title="Pink"></button>
+      <button class="swatch"        data-theme="green"  style="background:#98c4a8;" title="Green"></button>
+      <button class="swatch"        data-theme="blue"   style="background:#7aa0cc;" title="Blue"></button>
+      <button class="swatch"        data-theme="purple" style="background:#b0a0c8;" title="Purple"></button>
+    </div>
 
-    <span class="stat-sep">|</span>
+    <span class="stat-sep" style="padding-top:6px;">|</span>
 
-    <span style="font-size:12px;color:#6b7280;white-space:nowrap;">Color:</span>
-    <button class="swatch active" data-theme=""      style="background:#c2d0da;" title="Clear"></button>
-    <button class="swatch"        data-theme="pink"  style="background:#d8a8b8;" title="Pink"></button>
-    <button class="swatch"        data-theme="green" style="background:#98c4a8;" title="Green"></button>
-    <button class="swatch"        data-theme="blue"  style="background:#7aa0cc;" title="Blue"></button>
-    <button class="swatch"        data-theme="purple"style="background:#b0a0c8;" title="Purple"></button>
+    <div style="display:flex;align-items:center;gap:4px;padding-top:4px;">
+      <button id="btn-fresh">Fresh Sheet</button>
+      <button id="btn-share" class="tool-btn">Share</button>
+    </div>
 
-    <span class="stat-sep">|</span>
-
-    <button id="btn-share" class="tool-btn" title="Copy score to clipboard">Share Score</button>
   </div>
 
   <!-- Stats ──────────────────────────────────────────────────────────── -->
@@ -327,16 +265,13 @@
   <!-- Bubble sheet ───────────────────────────────────────────────────── -->
   <div class="flex-1 overflow-hidden px-3 pb-2" style="min-height:0;">
     <div id="sheet-container" class="w-full h-full">
-      <div id="streak-overlay" aria-hidden="true">
-        <span id="streak-text"></span>
-      </div>
       <div id="bubble-grid"></div>
     </div>
   </div>
 
   <!-- Keyboard hint -->
   <div id="kbd-hint" class="flex-shrink-0">
-    M = Manic &nbsp;·&nbsp; S = Sound &nbsp;·&nbsp; R = Fresh Sheet
+    M = Pop Mania &nbsp;·&nbsp; S = Sound &nbsp;·&nbsp; R = Fresh Sheet
   </div>
 
 </div>
@@ -490,7 +425,6 @@ const audio = new AudioManager();
 const state = {
   soundEnabled:  true,
   manicMode:     false,
-  classicMode:   false,
   ghostMode:     false,
   isPointerDown: false,
   cellSize:      56,   // S=80 M=56(default) L=36 XL=26
@@ -498,8 +432,7 @@ const state = {
   totalBubbles:  0,
 };
 
-const popTimes  = []; // rolling timestamps for BPS
-const recentPops = []; // rolling timestamps for streak
+const popTimes = []; // rolling timestamps for BPS
 
 // ═══════════════════════════════════════════════════════════════════════════
 // DOM references
@@ -509,10 +442,8 @@ const $grid       = document.getElementById('bubble-grid');
 const $statPop    = document.getElementById('stat-popped');
 const $statPct    = document.getElementById('stat-pct');
 const $statBps    = document.getElementById('stat-bps');
-const $streakText = document.getElementById('streak-text');
 const chkSound    = document.getElementById('chk-sound');
 const chkManic    = document.getElementById('chk-manic');
-const chkClassic  = document.getElementById('chk-classic');
 const chkGhost    = document.getElementById('chk-ghost');
 const btnFresh    = document.getElementById('btn-fresh');
 const btnShare    = document.getElementById('btn-share');
@@ -568,7 +499,7 @@ function resetBubbleStates() {
   stopGhostMode();
   poppedSet.clear();
   state.poppedCount = 0;
-  popTimes.length = recentPops.length = 0;
+  popTimes.length = 0;
   for (const el of bubbleEls) {
     el._gen = (el._gen || 0) + 1;
     el.className = 'bubble bubble-unpopped';
@@ -595,7 +526,6 @@ function popBubble(index) {
 
   const now = Date.now();
   popTimes.push(now);
-  recentPops.push(now);
 
   audio.pop();
   if (navigator.vibrate) navigator.vibrate(12); // haptic on Android
@@ -611,7 +541,6 @@ function popBubble(index) {
   }
 
   updateStats();
-  updateStreak();
 
   if (state.poppedCount === state.totalBubbles) {
     onSheetComplete();
@@ -674,30 +603,6 @@ function stopGhostMode() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Streak counter
-// ═══════════════════════════════════════════════════════════════════════════
-let streakHideTimer = null;
-
-function updateStreak() {
-  const now = Date.now();
-  while (recentPops.length && recentPops[0] < now - 1000) recentPops.shift();
-
-  const count = recentPops.length;
-  if (count < 6) {
-    // Not fast enough — let fade timer handle hiding
-    return;
-  }
-
-  $streakText.textContent = `x${count}`;
-  $streakText.classList.add('show');
-
-  clearTimeout(streakHideTimer);
-  streakHideTimer = setTimeout(() => {
-    $streakText.classList.remove('show');
-  }, 700);
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
 // Stats
 // ═══════════════════════════════════════════════════════════════════════════
 function updateStats() {
@@ -724,6 +629,7 @@ setInterval(() => {
 $sheet.addEventListener('pointerdown', (e) => {
   state.isPointerDown = true;
   $sheet.setPointerCapture(e.pointerId);
+  $sheet.classList.add('grabbing');
   const idx = bubbleAt(e.clientX, e.clientY);
   if (idx >= 0) popBubble(idx);
 });
@@ -734,8 +640,8 @@ $sheet.addEventListener('pointermove', (e) => {
   if (idx >= 0) popBubble(idx);
 });
 
-$sheet.addEventListener('pointerup',     () => { state.isPointerDown = false; });
-$sheet.addEventListener('pointercancel', () => { state.isPointerDown = false; });
+$sheet.addEventListener('pointerup',     () => { state.isPointerDown = false; $sheet.classList.remove('grabbing'); });
+$sheet.addEventListener('pointercancel', () => { state.isPointerDown = false; $sheet.classList.remove('grabbing'); });
 $sheet.addEventListener('contextmenu',   (e) => e.preventDefault());
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -749,11 +655,6 @@ chkSound.addEventListener('change', () => {
 chkManic.addEventListener('change', () => {
   state.manicMode = chkManic.checked;
   $sheet.classList.toggle('manic-cursor', state.manicMode);
-});
-
-chkClassic.addEventListener('change', () => {
-  state.classicMode = chkClassic.checked;
-  document.body.classList.toggle('classic', state.classicMode);
 });
 
 chkGhost.addEventListener('change', () => {
@@ -777,7 +678,6 @@ document.querySelectorAll('.swatch').forEach(sw => {
     document.body.className = document.body.className
       .replace(/\btheme-\S+/g, '').trim();
     if (theme) document.body.classList.add('theme-' + theme);
-    if (state.classicMode) document.body.classList.add('classic');
     document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s === sw));
   });
 });
