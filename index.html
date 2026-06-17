@@ -190,6 +190,59 @@
       font-size: 10.5px; color: #9ca3af;
       text-align: center; padding-bottom: 2px; pointer-events: none;
     }
+
+    /* ─── Options popover ──────────────────────────────────────────────── */
+    #options-popover {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      z-index: 50;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.11), 0 1px 4px rgba(0,0,0,0.07);
+      padding: 12px 14px;
+      min-width: 215px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .opt-divider { border: none; border-top: 1px solid #f3f4f6; margin: 0; }
+
+    .opt-section-label {
+      font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; color: #9ca3af; padding-left: 4px;
+    }
+
+    /* ─── Challenge overlay ─────────────────────────────────────────────── */
+    #challenge-overlay {
+      position: absolute; inset: 0;
+      background: rgba(237,241,245,0.95);
+      border-radius: 10px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 10; gap: 10px;
+    }
+
+    #co-play-again {
+      background: #3b82f6; color: #fff; border: none;
+      padding: 10px 30px; border-radius: 8px; font-size: 15px;
+      font-weight: 600; cursor: pointer; margin-top: 8px;
+      transition: background 0.1s, transform 0.08s;
+    }
+    #co-play-again:hover  { background: #2563eb; }
+    #co-play-again:active { transform: scale(0.95); }
+
+    @keyframes timer-pulse {
+      0%, 100% { transform: scale(1); }
+      50%       { transform: scale(1.2); }
+    }
+    .timer-urgent {
+      color: #ef4444 !important;
+      display: inline-block;
+      animation: timer-pulse 0.5s ease-in-out infinite;
+    }
   </style>
 </head>
 <body>
@@ -220,13 +273,6 @@
 
     <span class="stat-sep" style="padding-top:6px;">|</span>
 
-    <div style="display:flex;flex-direction:column;align-items:flex-start;">
-      <label class="ctrl-label"><input type="checkbox" id="chk-ghost"> Ghost Mode</label>
-      <span class="sub-hint">re-inflate after 100%</span>
-    </div>
-
-    <span class="stat-sep" style="padding-top:6px;">|</span>
-
     <div style="display:flex;align-items:center;gap:3px;padding-top:4px;">
       <button class="tool-btn" data-size="80">S</button>
       <button class="tool-btn active" data-size="56">M</button>
@@ -236,19 +282,56 @@
 
     <span class="stat-sep" style="padding-top:6px;">|</span>
 
-    <div style="display:flex;align-items:center;gap:4px;padding-top:6px;">
-      <button class="swatch active" data-theme=""       style="background:#c2d0da;" title="Clear"></button>
-      <button class="swatch"        data-theme="pink"   style="background:#d8a8b8;" title="Pink"></button>
-      <button class="swatch"        data-theme="green"  style="background:#98c4a8;" title="Green"></button>
-      <button class="swatch"        data-theme="blue"   style="background:#7aa0cc;" title="Blue"></button>
-      <button class="swatch"        data-theme="purple" style="background:#b0a0c8;" title="Purple"></button>
-    </div>
-
-    <span class="stat-sep" style="padding-top:6px;">|</span>
-
-    <div style="display:flex;align-items:center;gap:4px;padding-top:4px;">
+    <div style="display:flex;align-items:center;gap:4px;padding-top:4px;position:relative;">
       <button id="btn-fresh">Fresh Sheet</button>
       <button id="btn-share" class="tool-btn">Share</button>
+      <button id="btn-options" class="tool-btn" style="display:flex;align-items:center;gap:4px;">
+        <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0;opacity:0.7"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
+        Options
+      </button>
+
+      <!-- Options popover -->
+      <div id="options-popover" style="display:none;">
+
+        <!-- Ghost Mode -->
+        <div>
+          <label class="ctrl-label" style="padding:2px 4px;"><input type="checkbox" id="chk-ghost"> Ghost Mode</label>
+          <span class="sub-hint" style="padding-left:4px;">popped bubbles slowly reinflate</span>
+          <div style="display:flex;align-items:center;gap:3px;padding-left:4px;padding-top:4px;">
+            <span class="sub-hint" style="margin-right:1px;">speed:</span>
+            <button class="tool-btn ghost-speed" data-speed="3000">slow</button>
+            <button class="tool-btn ghost-speed active" data-speed="1500">med</button>
+            <button class="tool-btn ghost-speed" data-speed="500">fast</button>
+          </div>
+        </div>
+
+        <hr class="opt-divider">
+
+        <!-- Time Challenge -->
+        <div>
+          <label class="ctrl-label" style="padding:2px 4px;"><input type="checkbox" id="chk-challenge"> Time Challenge</label>
+          <div style="display:flex;align-items:center;gap:3px;padding-left:4px;padding-top:4px;">
+            <button class="tool-btn chall-dur" data-dur="30">30s</button>
+            <button class="tool-btn chall-dur active" data-dur="60">60s</button>
+            <button class="tool-btn chall-dur" data-dur="90">90s</button>
+          </div>
+        </div>
+
+        <hr class="opt-divider">
+
+        <!-- Color -->
+        <div>
+          <div class="opt-section-label">Color</div>
+          <div style="display:flex;align-items:center;gap:7px;padding-left:4px;padding-top:6px;">
+            <button class="swatch active" data-theme=""       style="background:#c2d0da;" title="Clear"></button>
+            <button class="swatch"        data-theme="pink"   style="background:#d8a8b8;" title="Pink"></button>
+            <button class="swatch"        data-theme="green"  style="background:#98c4a8;" title="Green"></button>
+            <button class="swatch"        data-theme="blue"   style="background:#7aa0cc;" title="Blue"></button>
+            <button class="swatch"        data-theme="purple" style="background:#b0a0c8;" title="Purple"></button>
+          </div>
+        </div>
+
+      </div><!-- /options-popover -->
     </div>
 
   </div>
@@ -260,18 +343,29 @@
     <span class="stat-label">Complete: <span id="stat-pct" class="stat-val">0%</span></span>
     <span class="stat-sep">·</span>
     <span class="stat-label">Per sec: <span id="stat-bps" class="stat-val">0</span></span>
+    <span id="stat-timer-wrap" style="display:none;">
+      <span class="stat-sep">·</span>
+      <span class="stat-label">&#x23F1; <span id="stat-timer" class="stat-val">1:00</span></span>
+    </span>
   </div>
 
   <!-- Bubble sheet ───────────────────────────────────────────────────── -->
   <div class="flex-1 overflow-hidden px-3 pb-2" style="min-height:0;">
     <div id="sheet-container" class="w-full h-full">
+      <div id="challenge-overlay" style="display:none;">
+        <div style="font-size:2.5rem; line-height:1; margin-bottom:2px;">&#x23F1;</div>
+        <div id="co-title" style="font-size:1.6rem; font-weight:700; color:#111827; letter-spacing:-0.01em;">Time's Up!</div>
+        <div id="co-score" style="font-size:1.05rem; color:#374151; text-align:center; line-height:1.6;"></div>
+        <div id="co-best"  style="font-size:0.95rem; font-weight:600;"></div>
+        <button id="co-play-again">Play Again</button>
+      </div>
       <div id="bubble-grid"></div>
     </div>
   </div>
 
   <!-- Keyboard hint -->
   <div id="kbd-hint" class="flex-shrink-0">
-    M = Pop Mania &nbsp;·&nbsp; S = Sound &nbsp;·&nbsp; R = Fresh Sheet
+    M = Pop Mania &nbsp;·&nbsp; S = Sound &nbsp;·&nbsp; R = Fresh Sheet &nbsp;·&nbsp; T = Time Challenge
   </div>
 
 </div>
@@ -423,13 +517,18 @@ class AudioManager {
 const audio = new AudioManager();
 
 const state = {
-  soundEnabled:  true,
-  manicMode:     false,
-  ghostMode:     false,
-  isPointerDown: false,
-  cellSize:      56,   // S=80 M=56(default) L=36 XL=26
-  poppedCount:   0,
-  totalBubbles:  0,
+  soundEnabled:      true,
+  manicMode:         false,
+  ghostMode:         false,
+  ghostSpeed:        1500, // ms between re-inflations
+  isPointerDown:     false,
+  cellSize:          56,   // S=80 M=56(default) L=36 XL=26
+  poppedCount:       0,
+  totalBubbles:      0,
+  timeChallengeMode: false,
+  challengeDuration: 60,   // seconds: 30, 60, or 90
+  challengeActive:   false,
+  challengeTimeLeft: 0,
 };
 
 const popTimes = []; // rolling timestamps for BPS
@@ -445,8 +544,18 @@ const $statBps    = document.getElementById('stat-bps');
 const chkSound    = document.getElementById('chk-sound');
 const chkManic    = document.getElementById('chk-manic');
 const chkGhost    = document.getElementById('chk-ghost');
-const btnFresh    = document.getElementById('btn-fresh');
-const btnShare    = document.getElementById('btn-share');
+const btnFresh          = document.getElementById('btn-fresh');
+const btnShare          = document.getElementById('btn-share');
+const btnOptions        = document.getElementById('btn-options');
+const $optionsPopover   = document.getElementById('options-popover');
+const chkChallenge      = document.getElementById('chk-challenge');
+const $timerWrap        = document.getElementById('stat-timer-wrap');
+const $timerEl          = document.getElementById('stat-timer');
+const $challengeOverlay = document.getElementById('challenge-overlay');
+const $coTitle          = document.getElementById('co-title');
+const $coScore          = document.getElementById('co-score');
+const $coBest           = document.getElementById('co-best');
+const $coPlayAgain      = document.getElementById('co-play-again');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Bubble grid
@@ -497,6 +606,7 @@ function buildGrid(w, h) {
 
 function resetBubbleStates() {
   stopGhostMode();
+  resetChallenge();
   poppedSet.clear();
   state.poppedCount = 0;
   popTimes.length = 0;
@@ -529,6 +639,8 @@ function popBubble(index) {
 
   audio.pop();
   if (navigator.vibrate) navigator.vibrate(12); // haptic on Android
+
+  if (state.timeChallengeMode && !state.challengeActive) startChallenge();
 
   const el = bubbleEls[index];
   if (el) {
@@ -563,6 +675,11 @@ function onSheetComplete() {
   $statPct.classList.add('sparkle');
   $statPct.addEventListener('animationend', () => $statPct.classList.remove('sparkle'), { once: true });
 
+  if (state.timeChallengeMode && state.challengeActive) {
+    endChallenge(true);
+    return;
+  }
+
   if (state.ghostMode) {
     setTimeout(startGhostMode, 1200);
   }
@@ -575,7 +692,7 @@ let ghostInterval = null;
 
 function startGhostMode() {
   if (ghostInterval) return;
-  ghostInterval = setInterval(() => {
+  ghostInterval = setInterval(() => { // interval duration set by state.ghostSpeed
     if (!state.ghostMode) { stopGhostMode(); return; }
     const candidates = [...poppedSet];
     if (candidates.length === 0) { stopGhostMode(); return; }
@@ -594,12 +711,89 @@ function startGhostMode() {
       }, 400);
     }
     updateStats();
-  }, 1500);
+  }, state.ghostSpeed);
 }
 
 function stopGhostMode() {
   clearInterval(ghostInterval);
   ghostInterval = null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Time Challenge
+// ═══════════════════════════════════════════════════════════════════════════
+let challengeTimer = null;
+
+function fmtTime(s) {
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+
+function updateTimerDisplay() {
+  if (!state.timeChallengeMode || !state.challengeActive) {
+    $timerWrap.style.display = 'none';
+    return;
+  }
+  $timerWrap.style.display = '';
+  const t = state.challengeTimeLeft;
+  $timerEl.textContent = fmtTime(t);
+  $timerEl.classList.toggle('timer-urgent', t <= 10);
+}
+
+function startChallenge() {
+  if (state.challengeActive) return;
+  state.challengeActive   = true;
+  state.challengeTimeLeft = state.challengeDuration;
+  updateTimerDisplay();
+  challengeTimer = setInterval(() => {
+    state.challengeTimeLeft--;
+    updateTimerDisplay();
+    if (state.challengeTimeLeft <= 0) endChallenge();
+  }, 1000);
+}
+
+function endChallenge(cleared = false) {
+  clearInterval(challengeTimer);
+  challengeTimer = null;
+  state.challengeActive = false;
+
+  const timeUsed = state.challengeDuration - state.challengeTimeLeft;
+  const key   = 'vbw_best_' + state.challengeDuration;
+  const prev  = parseInt(localStorage.getItem(key) || '0');
+  const score = state.poppedCount;
+  const isNew = score > prev;
+  if (isNew && score > 0) localStorage.setItem(key, score);
+
+  $timerEl.textContent = fmtTime(0);
+  $timerEl.classList.remove('timer-urgent');
+  $timerWrap.style.display = 'none';
+
+  if (cleared) {
+    $coTitle.textContent = 'Sheet Cleared! 🎉';
+    $coScore.textContent = `All ${score} bubbles popped in ${timeUsed}s`;
+  } else {
+    $coTitle.textContent = "Time's Up!";
+    $coScore.textContent = `You popped ${score} bubble${score !== 1 ? 's' : ''} in ${state.challengeDuration}s`;
+  }
+  if (isNew && score > 0) {
+    $coBest.textContent = '🏆 New best: ' + score + '!';
+    $coBest.style.color = '#f59e0b';
+  } else if (prev > 0) {
+    $coBest.textContent = 'Best: ' + prev;
+    $coBest.style.color = '#6b7280';
+  } else {
+    $coBest.textContent = '';
+  }
+  $challengeOverlay.style.display = '';
+}
+
+function resetChallenge() {
+  clearInterval(challengeTimer);
+  challengeTimer = null;
+  state.challengeActive   = false;
+  state.challengeTimeLeft = 0;
+  $timerWrap.style.display = 'none';
+  $timerEl.classList.remove('timer-urgent');
+  $challengeOverlay.style.display = 'none';
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -627,6 +821,7 @@ setInterval(() => {
 // Pointer events
 // ═══════════════════════════════════════════════════════════════════════════
 $sheet.addEventListener('pointerdown', (e) => {
+  if ($challengeOverlay.style.display !== 'none') return;
   state.isPointerDown = true;
   $sheet.setPointerCapture(e.pointerId);
   $sheet.classList.add('grabbing');
@@ -662,6 +857,33 @@ chkGhost.addEventListener('change', () => {
   if (!state.ghostMode) stopGhostMode();
 });
 
+document.querySelectorAll('.ghost-speed').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.ghostSpeed = parseInt(btn.dataset.speed);
+    document.querySelectorAll('.ghost-speed').forEach(b => b.classList.toggle('active', b === btn));
+    if (ghostInterval) { stopGhostMode(); startGhostMode(); }
+  });
+});
+
+// Time Challenge
+chkChallenge.addEventListener('change', () => {
+  state.timeChallengeMode = chkChallenge.checked;
+  if (!state.timeChallengeMode) resetChallenge();
+});
+
+document.querySelectorAll('.chall-dur').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.challengeDuration = parseInt(btn.dataset.dur);
+    document.querySelectorAll('.chall-dur').forEach(b => b.classList.toggle('active', b === btn));
+    if (state.challengeActive) { resetChallenge(); resetBubbleStates(); }
+  });
+});
+
+$coPlayAgain.addEventListener('click', () => {
+  resetChallenge();
+  resetSheet();
+});
+
 // Size presets
 document.querySelectorAll('[data-size]').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -682,6 +904,21 @@ document.querySelectorAll('.swatch').forEach(sw => {
   });
 });
 
+// Options popover toggle
+btnOptions.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const open = $optionsPopover.style.display !== 'none';
+  $optionsPopover.style.display = open ? 'none' : '';
+  btnOptions.classList.toggle('active', !open);
+});
+
+document.addEventListener('click', (e) => {
+  if (!$optionsPopover.contains(e.target) && e.target !== btnOptions) {
+    $optionsPopover.style.display = 'none';
+    btnOptions.classList.remove('active');
+  }
+});
+
 // Fresh Sheet
 btnFresh.addEventListener('click', () => {
   resetSheet();
@@ -700,7 +937,7 @@ btnShare.addEventListener('click', async () => {
     if (navigator.share) { await navigator.share({ text }); return; }
     await navigator.clipboard.writeText(text);
     btnShare.textContent = 'Copied!';
-    setTimeout(() => { btnShare.textContent = 'Share Score'; }, 2000);
+    setTimeout(() => { btnShare.textContent = 'Share'; }, 2000);
   } catch (_) {}
 });
 
@@ -708,11 +945,17 @@ btnShare.addEventListener('click', async () => {
 // Keyboard shortcuts
 // ═══════════════════════════════════════════════════════════════════════════
 window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    $optionsPopover.style.display = 'none';
+    btnOptions.classList.remove('active');
+    return;
+  }
   if (e.target.tagName === 'INPUT') return;
   switch (e.key.toLowerCase()) {
     case 'm': chkManic.checked = !chkManic.checked; chkManic.dispatchEvent(new Event('change')); break;
     case 's': chkSound.checked = !chkSound.checked; chkSound.dispatchEvent(new Event('change')); break;
     case 'r': btnFresh.click(); break;
+    case 't': chkChallenge.checked = !chkChallenge.checked; chkChallenge.dispatchEvent(new Event('change')); break;
   }
 });
 
