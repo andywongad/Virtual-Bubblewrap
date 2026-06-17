@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Virtual Bubble Wrap</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --sheet-bg-1: #c2d0da;
+      --sheet-bg-2: #b5c5d0;
+      --sheet-bg-3: #c8d5de;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background: #edf1f5;
+    }
+
+    /* ─── Sheet ─────────────────────────────────────────────────────────── */
+    #sheet-container {
+      background:
+        radial-gradient(ellipse at 20% 30%, rgba(255,255,255,0.08) 0%, transparent 60%),
+        linear-gradient(145deg, var(--sheet-bg-1) 0%, var(--sheet-bg-2) 50%, var(--sheet-bg-3) 100%);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      cursor: default;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #bubble-grid {
+      display: grid;
+      /* cols/gap set by JS */
+    }
+
+    /* ─── Bubble states ──────────────────────────────────────────────────── */
+    .bubble {
+      border-radius: 50%;
+      will-change: transform;
+    }
+
+    .bubble-unpopped {
+      cursor: pointer;
+      background: radial-gradient(
+        ellipse at 33% 28%,
+        rgba(255,255,255,0.97)   0%,
+        rgba(242,251,255,0.89)  17%,
+        rgba(218,237,250,0.79)  36%,
+        rgba(193,217,237,0.69)  56%,
+        rgba(168,199,222,0.61)  74%,
+        rgba(150,184,210,0.57) 100%
+      );
+      box-shadow:
+        0 4px 11px rgba(0,0,0,0.23),
+        0 1px 3px  rgba(0,0,0,0.15),
+        inset 0 -3px 6px rgba(65,100,132,0.21),
+        inset 0 4px 9px rgba(255,255,255,0.78);
+      transition: transform 0.05s ease-out, box-shadow 0.05s ease-out;
+    }
+
+    /* subtle hover lift */
+    .bubble-unpopped:hover {
+      box-shadow:
+        0 6px 14px rgba(0,0,0,0.27),
+        0 2px 4px  rgba(0,0,0,0.16),
+        inset 0 -3px 6px rgba(65,100,132,0.21),
+        inset 0 4px 9px rgba(255,255,255,0.78);
+    }
+
+    @keyframes pop-anim {
+      0%   { transform: scale(1);                   opacity: 1;    }
+      18%  { transform: scale(0.83);                opacity: 0.97; }
+      36%  { transform: scale(0.89);                opacity: 0.92; }
+      68%  { transform: scale(0.71);                opacity: 0.83; }
+      100% { transform: scale(0.67) translateY(2px); opacity: 0.72; }
+    }
+
+    .bubble-popping {
+      animation: pop-anim 0.14s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    .bubble-popped {
+      cursor: default;
+      pointer-events: none;
+      background: radial-gradient(
+        ellipse at 50% 63%,
+        rgba(115,136,152,0.73) 0%,
+        rgba(136,156,170,0.57) 28%,
+        rgba(156,173,186,0.41) 58%,
+        rgba(172,187,200,0.27) 100%
+      );
+      box-shadow:
+        inset 0 2px 5px rgba(0,0,0,0.31),
+        inset 0 0 9px  rgba(0,0,0,0.14);
+      transform: scale(0.67) translateY(2px);
+      opacity: 0.72;
+    }
+
+    /* ─── Classic 2004 mode ─────────────────────────────────────────────── */
+    body.classic {
+      background: #dce8f5;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body.classic #sheet-container {
+      background: linear-gradient(160deg, #7799bb 0%, #6688aa 100%);
+      border: 3px solid #4466aa;
+      border-radius: 4px;
+    }
+
+    body.classic .bubble-unpopped {
+      background: radial-gradient(
+        circle at 38% 33%,
+        #ffffff       0%,
+        #c0deff      25%,
+        #80aaee      55%,
+        #4477cc      82%,
+        #2255aa     100%
+      );
+      box-shadow:
+        0 3px 7px rgba(0,0,60,0.38),
+        inset 0 -2px 4px rgba(20,40,100,0.25),
+        inset 0 3px 7px rgba(255,255,255,0.68);
+    }
+
+    body.classic .bubble-unpopped:hover {
+      box-shadow:
+        0 5px 10px rgba(0,0,60,0.42),
+        inset 0 -2px 4px rgba(20,40,100,0.25),
+        inset 0 3px 7px rgba(255,255,255,0.68);
+    }
+
+    body.classic .bubble-popped {
+      background: radial-gradient(
+        circle at 50% 55%,
+        #384858 0%,
+        #485868 38%,
+        #586878 100%
+      );
+      box-shadow: inset 0 2px 5px rgba(0,0,0,0.45);
+    }
+
+    body.classic #app-title {
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(180deg, #7799dd 0%, #3355aa 100%);
+      color: #ffffff;
+      padding: 3px 16px 4px;
+      border-radius: 3px;
+      border: 1px solid #2244aa;
+      text-shadow: 1px 1px 2px rgba(0,0,60,0.4);
+    }
+
+    body.classic .ctrl-label {
+      font-family: Arial, Helvetica, sans-serif;
+      color: #112244;
+    }
+
+    body.classic #btn-fresh {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #3366cc;
+      border: 2px solid #2244aa;
+    }
+
+    body.classic #btn-fresh:hover { background: #2255bb; }
+
+    body.classic .stat-label { color: #223355; }
+    body.classic .stat-val   { color: #001133; }
+
+    /* ─── Controls ──────────────────────────────────────────────────────── */
+    .ctrl-label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: #374151;
+      padding: 4px 9px;
+      border-radius: 7px;
+      transition: background 0.1s;
+      white-space: nowrap;
+    }
+    .ctrl-label:hover { background: rgba(0,0,0,0.06); }
+    .ctrl-label input[type=checkbox] {
+      cursor: pointer;
+      width: 14px;
+      height: 14px;
+      accent-color: #3b82f6;
+    }
+
+    #btn-fresh {
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      padding: 5px 15px;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.01em;
+      transition: background 0.1s, transform 0.08s;
+    }
+    #btn-fresh:hover  { background: #2563eb; }
+    #btn-fresh:active { transform: scale(0.95); }
+
+    /* ─── Stats ─────────────────────────────────────────────────────────── */
+    .stat-label {
+      font-size: 12.5px;
+      color: #6b7280;
+      white-space: nowrap;
+    }
+    .stat-val {
+      font-weight: 700;
+      color: #111827;
+      margin-left: 3px;
+    }
+    .stat-sep { color: #d1d5db; margin: 0 8px; font-size: 13px; }
+
+    /* completion sparkle */
+    @keyframes sparkle {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(1.12); }
+    }
+    .sparkle { animation: sparkle 0.38s ease-in-out 4; }
+
+    /* ─── Manic cursor — needs high specificity to beat #sheet-container ── */
+    #sheet-container.manic-cursor { cursor: crosshair; }
+
+    /* ─── Density buttons ───────────────────────────────────────────────── */
+    .density-btn {
+      padding: 2px 7px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 11.5px;
+      font-weight: 500;
+      cursor: pointer;
+      background: white;
+      color: #6b7280;
+      transition: all 0.1s;
+      line-height: 1.4;
+    }
+    .density-btn:hover { border-color: #9ca3af; color: #374151; }
+    .density-btn.active {
+      background: #3b82f6;
+      border-color: #3b82f6;
+      color: white;
+    }
+    body.classic .density-btn.active { background: #3366cc; border-color: #2244aa; }
+
+    /* ─── Kbd shortcut hint ─────────────────────────────────────────────── */
+    #kbd-hint {
+      font-size: 10.5px;
+      color: #9ca3af;
+      text-align: center;
+      padding-bottom: 2px;
+      pointer-events: none;
+    }
+    body.classic #kbd-hint { color: #4477aa; font-family: Arial, sans-serif; }
+  </style>
+</head>
+<body>
+
+<div id="app" class="flex flex-col" style="height:100dvh; min-height:100vh;">
+
+  <!-- Header ─────────────────────────────────────────────────────────── -->
+  <header class="flex-shrink-0 flex items-center justify-center pt-2 pb-1 px-4">
+    <h1 id="app-title"
+        class="text-2xl font-bold text-gray-800 tracking-tight select-none">
+      Virtual Bubble Wrap
+    </h1>
+  </header>
+
+  <!-- Controls ───────────────────────────────────────────────────────── -->
+  <div class="flex-shrink-0 flex items-center justify-center gap-0.5 py-0.5 px-3 flex-wrap">
+    <label class="ctrl-label">
+      <input type="checkbox" id="chk-sound" checked> Sound On
+    </label>
+    <span class="stat-sep">|</span>
+    <label class="ctrl-label">
+      <input type="checkbox" id="chk-manic"> Manic Mode
+    </label>
+    <span class="stat-sep">|</span>
+    <label class="ctrl-label">
+      <input type="checkbox" id="chk-classic"> Classic 2004
+    </label>
+    <span class="stat-sep">|</span>
+    <span class="ctrl-label" style="gap:3px; cursor:default;">
+      <span style="color:#6b7280;font-size:12px;">Bubbles:</span>
+      <button class="density-btn active" data-density="1">Full</button>
+      <button class="density-btn" data-density="0.75">75%</button>
+      <button class="density-btn" data-density="0.5">50%</button>
+      <button class="density-btn" data-density="0.25">25%</button>
+    </span>
+    <span class="stat-sep">|</span>
+    <button id="btn-fresh" title="Double-click for a bigger sheet!">Fresh Sheet</button>
+  </div>
+
+  <!-- Stats ──────────────────────────────────────────────────────────── -->
+  <div class="flex-shrink-0 flex items-center justify-center py-0.5 px-3">
+    <span class="stat-label">Popped: <span id="stat-popped" class="stat-val">0</span></span>
+    <span class="stat-sep">·</span>
+    <span class="stat-label">Complete: <span id="stat-pct" class="stat-val">0%</span></span>
+    <span class="stat-sep">·</span>
+    <span class="stat-label">Per sec: <span id="stat-bps" class="stat-val">0</span></span>
+  </div>
+
+  <!-- Bubble sheet ───────────────────────────────────────────────────── -->
+  <div class="flex-1 overflow-hidden px-3 pb-2" style="min-height:0;">
+    <div id="sheet-container" class="w-full h-full">
+      <div id="bubble-grid"></div>
+    </div>
+  </div>
+
+  <!-- Keyboard hint -->
+  <div id="kbd-hint" class="flex-shrink-0">
+    M = Manic &nbsp;·&nbsp; S = Sound &nbsp;·&nbsp; R = Fresh Sheet &nbsp;·&nbsp; Double-click Fresh Sheet for bigger
+  </div>
+
+</div><!-- #app -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// AudioManager — synthesises realistic pop sounds via Web Audio API
+// ═══════════════════════════════════════════════════════════════════════════
+class AudioManager {
+  constructor() {
+    this._ctx = null;
+    this.enabled = true;
+  }
+
+  _getCtx() {
+    if (!this._ctx) {
+      this._ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (this._ctx.state === 'suspended') this._ctx.resume();
+    return this._ctx;
+  }
+
+  pop() {
+    if (!this.enabled) return;
+    try {
+      const ctx = this._getCtx();
+      const t   = ctx.currentTime;
+
+      // Randomise each pop so none sound identical
+      const baseFreq = 190 + Math.random() * 290;   // 190–480 Hz
+      const vol      = 0.17 + Math.random() * 0.24;
+      const dur      = 0.050 + Math.random() * 0.052; // 50–102 ms
+
+      // White-noise burst with exponential decay envelope
+      const n   = Math.ceil(ctx.sampleRate * dur);
+      const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+      const d   = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) {
+        d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (n * 0.10));
+      }
+
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+
+      // Bandpass colours the noise into a "plastic pop" timbre
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = baseFreq;
+      bp.Q.value = 0.45 + Math.random() * 0.95;
+
+      // Slight high-shelf adds the snappy "crack"
+      const hs = ctx.createBiquadFilter();
+      hs.type = 'highshelf';
+      hs.frequency.value = 2600;
+      hs.gain.value = 4 + Math.random() * 3;
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(vol, t);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + dur * 1.6);
+
+      src.connect(bp);
+      bp.connect(hs);
+      hs.connect(gain);
+      gain.connect(ctx.destination);
+
+      src.start(t);
+      src.stop(t + dur * 2);
+    } catch (_) { /* Audio unavailable — silently continue */ }
+  }
+
+  setEnabled(v) { this.enabled = v; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// App state
+// ═══════════════════════════════════════════════════════════════════════════
+const audio = new AudioManager();
+
+const state = {
+  soundEnabled:  true,
+  manicMode:     false,
+  classicMode:   false,
+  isLargeSheet:  false,
+  isPointerDown: false,
+  density:       1.0,   // 1.0 = full, 0.75 = 75%, 0.5 = 50%
+  poppedCount:   0,
+  totalBubbles:  0,
+};
+
+// Recent pop timestamps — used to compute bubbles-per-second
+const popTimes = [];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DOM references
+// ═══════════════════════════════════════════════════════════════════════════
+const $sheet    = document.getElementById('sheet-container');
+const $grid     = document.getElementById('bubble-grid');
+const $statPop  = document.getElementById('stat-popped');
+const $statPct  = document.getElementById('stat-pct');
+const $statBps  = document.getElementById('stat-bps');
+const chkSound  = document.getElementById('chk-sound');
+const chkManic  = document.getElementById('chk-manic');
+const chkClassic= document.getElementById('chk-classic');
+const btnFresh  = document.getElementById('btn-fresh');
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Bubble grid management
+// ═══════════════════════════════════════════════════════════════════════════
+const CELL_NORMAL = 36; // bubble diameter 32 + 4 gap
+const CELL_LARGE  = 26; // bubble diameter 22 + 4 gap
+const GAP         = 4;
+
+// Parallel array of DOM elements indexed by bubble position
+let bubbleEls = [];
+// Set of popped bubble indices — checked before popping to avoid re-pops
+const poppedSet = new Set();
+
+// Current grid dimensions (tracked to avoid unnecessary rebuilds)
+let gCols = 0, gRows = 0, gCellSize = 0;
+
+/**
+ * Rebuild or resize the bubble grid to fit the container.
+ * Preserves existing bubble states when only adding/removing edge bubbles.
+ * @param {number} w  — available width  (px)
+ * @param {number} h  — available height (px)
+ * @param {boolean} large — use smaller cells to fit more bubbles
+ * @returns {boolean} true if a full reset is warranted (cell size changed)
+ */
+function buildGrid(w, h, large) {
+  // Scale cell size up to reduce bubble count: halving area → √2× bigger cells
+  const base     = large ? CELL_LARGE : CELL_NORMAL;
+  const cellSize = Math.round(base / Math.sqrt(state.density));
+  const bubbleSize = cellSize - GAP;
+  const cols = Math.max(2, Math.floor(w / cellSize));
+  const rows = Math.max(2, Math.floor(h / cellSize));
+  const total = cols * rows;
+
+  if (cols === gCols && rows === gRows && cellSize === gCellSize) return false;
+
+  const cellSizeChanged = cellSize !== gCellSize;
+  gCols = cols; gRows = rows; gCellSize = cellSize;
+
+  $grid.style.gridTemplateColumns = `repeat(${cols}, ${bubbleSize}px)`;
+  $grid.style.gap = `${GAP}px`;
+
+  // Resize existing elements if bubble size changed
+  if (cellSizeChanged) {
+    for (const el of $grid.children) {
+      el.style.width = el.style.height = bubbleSize + 'px';
+    }
+  }
+
+  // Remove excess elements (right-edge / bottom-edge bubbles)
+  while ($grid.children.length > total) {
+    const removed = $grid.removeChild($grid.lastChild);
+    const bi = parseInt(removed.dataset.bi);
+    if (poppedSet.has(bi)) {
+      poppedSet.delete(bi);
+      state.poppedCount = Math.max(0, state.poppedCount - 1);
+    }
+  }
+
+  // Add new elements for expanded area
+  const prev = $grid.children.length;
+  for (let i = prev; i < total; i++) {
+    const el = document.createElement('div');
+    el.className = 'bubble bubble-unpopped';
+    el.style.cssText = `width:${bubbleSize}px;height:${bubbleSize}px`;
+    el.dataset.bi = i;
+    $grid.appendChild(el);
+  }
+
+  // Sync flat reference array with current DOM children
+  bubbleEls = Array.from($grid.children);
+
+  state.totalBubbles = total;
+  updateStats();
+
+  return cellSizeChanged;
+}
+
+/**
+ * Hard-reset: clears all popped states, rebuilds grid from scratch.
+ * Called by Fresh Sheet button.
+ */
+function resetSheet(large) {
+  state.isLargeSheet = large;
+  // Force full rebuild on next buildGrid call
+  gCols = 0; gRows = 0; gCellSize = 0;
+
+  const rect = $sheet.getBoundingClientRect();
+  buildGrid(rect.width - 16, rect.height - 16, state.isLargeSheet);
+  resetBubbleStates();
+}
+
+function resetBubbleStates() {
+  poppedSet.clear();
+  state.poppedCount = 0;
+  popTimes.length   = 0;
+  for (const el of bubbleEls) {
+    el._gen = (el._gen || 0) + 1; // invalidate any mid-animation setTimeout
+    el.className = 'bubble bubble-unpopped';
+  }
+  updateStats();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Popping logic
+// ═══════════════════════════════════════════════════════════════════════════
+function popBubble(index) {
+  if (index < 0 || index >= state.totalBubbles) return;
+  if (poppedSet.has(index)) return;
+
+  poppedSet.add(index);
+  state.poppedCount++;
+  popTimes.push(Date.now());
+  audio.pop();
+
+  const el = bubbleEls[index];
+  if (el) {
+    // Generation counter guards against Fresh Sheet resetting mid-animation
+    el._gen = (el._gen || 0) + 1;
+    const gen = el._gen;
+    el.className = 'bubble bubble-popping';
+    setTimeout(() => {
+      if (el._gen === gen) el.className = 'bubble bubble-popped';
+    }, 150);
+  }
+
+  updateStats();
+
+  // Celebration flash on 100%
+  if (state.poppedCount === state.totalBubbles) {
+    $statPct.classList.add('sparkle');
+    $statPct.addEventListener('animationend', () => {
+      $statPct.classList.remove('sparkle');
+    }, { once: true });
+  }
+}
+
+/** Returns the bubble index under a screen point, or -1. */
+function bubbleAt(x, y) {
+  for (const el of document.elementsFromPoint(x, y)) {
+    if (el.dataset && el.dataset.bi !== undefined) {
+      return parseInt(el.dataset.bi);
+    }
+  }
+  return -1;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Stats display
+// ═══════════════════════════════════════════════════════════════════════════
+function updateStats() {
+  $statPop.textContent = state.poppedCount;
+  const pct = state.totalBubbles > 0
+    ? Math.round((state.poppedCount / state.totalBubbles) * 100)
+    : 0;
+  $statPct.textContent = pct + '%';
+}
+
+// BPS: rolling 2-second window
+setInterval(() => {
+  const cutoff = Date.now() - 2000;
+  while (popTimes.length && popTimes[0] < cutoff) popTimes.shift();
+  $statBps.textContent = (popTimes.length / 2).toFixed(1);
+}, 200);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Pointer events (unified mouse + touch via Pointer Events API)
+// ═══════════════════════════════════════════════════════════════════════════
+$sheet.addEventListener('pointerdown', (e) => {
+  state.isPointerDown = true;
+  // Capture to container so pointermove fires even if cursor leaves a bubble
+  $sheet.setPointerCapture(e.pointerId);
+  const idx = bubbleAt(e.clientX, e.clientY);
+  if (idx >= 0) popBubble(idx);
+});
+
+$sheet.addEventListener('pointermove', (e) => {
+  if (!state.isPointerDown || !state.manicMode) return;
+  const idx = bubbleAt(e.clientX, e.clientY);
+  if (idx >= 0) popBubble(idx);
+});
+
+$sheet.addEventListener('pointerup',     () => { state.isPointerDown = false; });
+$sheet.addEventListener('pointercancel', () => { state.isPointerDown = false; });
+$sheet.addEventListener('contextmenu',   (e) => e.preventDefault());
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Controls
+// ═══════════════════════════════════════════════════════════════════════════
+chkSound.addEventListener('change', () => {
+  state.soundEnabled = chkSound.checked;
+  audio.setEnabled(state.soundEnabled);
+});
+
+chkManic.addEventListener('change', () => {
+  state.manicMode = chkManic.checked;
+  $sheet.classList.toggle('manic-cursor', state.manicMode);
+});
+
+chkClassic.addEventListener('change', () => {
+  state.classicMode = chkClassic.checked;
+  document.body.classList.toggle('classic', state.classicMode);
+});
+
+// Density buttons
+const densityBtns = document.querySelectorAll('.density-btn');
+densityBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.density = parseFloat(btn.dataset.density);
+    densityBtns.forEach(b => b.classList.toggle('active', b === btn));
+    // Rebuild grid with new density, preserve manic/sound/classic settings
+    gCols = 0; gRows = 0; gCellSize = 0;
+    const rect = $sheet.getBoundingClientRect();
+    buildGrid(rect.width - 16, rect.height - 16, state.isLargeSheet);
+    resetBubbleStates();
+  });
+});
+
+// Fresh Sheet — single click = normal size, double-click = large sheet
+let freshClicks = 0, freshTimer = null;
+
+btnFresh.addEventListener('click', () => {
+  freshClicks++;
+  clearTimeout(freshTimer);
+  freshTimer = setTimeout(() => {
+    const large = freshClicks >= 2;
+    freshClicks = 0;
+    resetSheet(large);
+    btnFresh.title = large
+      ? 'Double-click for normal size'
+      : 'Double-click for a bigger sheet!';
+    btnFresh.textContent = 'ahhh new';
+    setTimeout(() => { btnFresh.textContent = 'Fresh Sheet'; }, 1400);
+
+  }, 320);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Keyboard shortcuts
+// ═══════════════════════════════════════════════════════════════════════════
+window.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  switch (e.key.toLowerCase()) {
+    case 'm':
+      chkManic.checked = !chkManic.checked;
+      chkManic.dispatchEvent(new Event('change'));
+      break;
+    case 's':
+      chkSound.checked = !chkSound.checked;
+      chkSound.dispatchEvent(new Event('change'));
+      break;
+    case 'r':
+      btnFresh.click();
+      break;
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Responsive grid via ResizeObserver
+// ═══════════════════════════════════════════════════════════════════════════
+const ro = new ResizeObserver(() => {
+  const rect = $sheet.getBoundingClientRect();
+  if (rect.width < 10 || rect.height < 10) return; // not yet laid out
+  buildGrid(rect.width - 16, rect.height - 16, state.isLargeSheet);
+});
+ro.observe($sheet);
+</script>
+</body>
+</html>
