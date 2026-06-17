@@ -284,9 +284,12 @@
 
   <!-- Controls ───────────────────────────────────────────────────────── -->
   <div class="flex-shrink-0 flex items-center justify-center gap-0.5 py-0.5 px-3 flex-wrap">
-    <label class="ctrl-label">
-      <input type="checkbox" id="chk-sound" checked> Sound On
-    </label>
+    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:0;">
+      <label class="ctrl-label">
+        <input type="checkbox" id="chk-sound" checked> Sound On
+      </label>
+      <span style="font-size:10px;color:#9ca3af;padding-left:11px;line-height:1.2;">📱 ringer must be on</span>
+    </div>
     <span class="stat-sep">|</span>
     <label class="ctrl-label">
       <input type="checkbox" id="chk-manic"> Manic Mode
